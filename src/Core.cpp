@@ -3,6 +3,7 @@
 
 // Creature Inherited Base Behavior
 void Creature::setBounds(int w, int h) { m_width = w; m_height = h; }
+
 void Creature::normalize() {
     float length = std::sqrt(m_dx * m_dx + m_dy * m_dy);
     if (length != 0) {
@@ -13,6 +14,17 @@ void Creature::normalize() {
 
 void Creature::bounce() {
     // should implement boundary controls here
+    // Bounce off left/right edges
+    if (m_x <= 0 || m_x >= m_width) {
+        m_dx = -m_dx;
+        m_x = std::clamp(m_x, 0.0f, static_cast<float>(m_width));
+    }
+
+    // Bounce off top/bottom edges
+    if (m_y <= 0 || m_y >= m_height) {
+        m_dy = -m_dy;
+        m_y = std::clamp(m_y, 0.0f, static_cast<float>(m_height));
+    }
 }
 
 
@@ -48,7 +60,13 @@ void GameEvent::print() const {
 
 // collision detection between two creatures
 bool checkCollision(std::shared_ptr<Creature> a, std::shared_ptr<Creature> b) {
-    return false; 
+    if (!a || !b)
+    return false;
+    float dx = a->getX() - b->getX();
+    float dy = a ->getY() - b -> getY();
+    float distanceSquared = dx*dx +dy*dy;
+    float radiusSum = a->getCollisionRadius() + b->getCollisionRadius();
+    return distanceSquared <= radiusSum*radiusSum;
 };
 
 
