@@ -98,9 +98,41 @@ public:
     int getValue() const { return m_value; }
 
     void setBounds(int w, int h);
+    void setDirection(float dx, float dy) {m_dx = dx; m_dy = dy;}
     void normalize();
     void bounce();
 };
+// PowerUp types
+enum class PowerUpType {
+    MAGNET_CORE,
+    SPEED_BOOST,
+    SCORE_SURGE,
+};
+
+// PowerUp class derived from Creature
+class PowerUp : public Creature {
+public:
+    PowerUp(float x, float y, std::shared_ptr<GameSprite> sprite, PowerUpType type)
+        : Creature(x, y, 0.1f, 10.0f, 0, std::move(sprite)), m_type(type) {}
+
+    void move() override {
+    }
+
+    void draw() const override {
+        if (m_sprite) {
+            m_sprite->draw(m_x, m_y);
+        } else {
+            ofSetColor(ofColor::cyan);
+            ofDrawCircle(m_x, m_y, m_collisionRadius);
+        }
+    }
+
+    PowerUpType getPowerUpType() const { return m_type; }
+
+private:
+    PowerUpType m_type;
+};
+
 
 // GameEvents
 enum class GameEventType {
@@ -112,6 +144,7 @@ enum class GameEventType {
     GAME_EXIT,
     NEW_LEVEL,
 };
+
 
 class GameEvent {
     public:
@@ -154,8 +187,6 @@ protected:
     int m_levelNumber;
     
 };
-
-
 
 
 class GameScene {

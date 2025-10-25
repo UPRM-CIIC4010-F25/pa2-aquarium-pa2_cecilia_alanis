@@ -9,7 +9,8 @@
 
 enum class AquariumCreatureType {
     NPCreature,
-    BiggerFish
+    BiggerFish,
+    PowerUp
 };
 
 string AquariumCreatureTypeToString(AquariumCreatureType t);
@@ -67,6 +68,13 @@ public:
     void loseLife(int debounce);
     void increasePower(int value) { m_power += value; }
     void reduceDamageDebounce();
+    void bump();
+
+    //Magnet PowerUp
+    bool m_magnetActive = false;
+    int m_magnetTimer = 0;
+    void activateMagnet (int duration);
+    bool isMagnetActive() const {return m_magnetActive;}
     
 private:
     int m_score = 0;
@@ -99,9 +107,11 @@ class AquariumSpriteManager {
         AquariumSpriteManager();
         ~AquariumSpriteManager() = default;
         std::shared_ptr<GameSprite>GetSprite(AquariumCreatureType t);
+        std::shared_ptr<GameSprite> getPowerUpSprite() const {return m_powerup; }
     private:
         std::shared_ptr<GameSprite> m_npc_fish;
         std::shared_ptr<GameSprite> m_big_fish;
+        std::shared_ptr<GameSprite> m_powerup;
 };
 
 
@@ -112,7 +122,7 @@ public:
     void addAquariumLevel(std::shared_ptr<AquariumLevel> level);
     void removeCreature(std::shared_ptr<Creature> creature);
     void clearCreatures();
-    void update();
+    void update(std::shared_ptr<PlayerCreature> player);
     void draw() const;
     void setBounds(int w, int h) { m_width = w; m_height = h; }
     void setMaxPopulation(int n) { m_maxPopulation = n; }
@@ -123,6 +133,7 @@ public:
     int getCreatureCount() const { return m_creatures.size(); }
     int getWidth() const { return m_width; }
     int getHeight() const { return m_height; }
+    std::shared_ptr<AquariumSpriteManager> getSpriteManager() const {return m_sprite_manager; }
 
 
 private:
@@ -158,6 +169,7 @@ class AquariumGameScene : public GameScene {
         std::shared_ptr<GameEvent> m_lastEvent;
         string m_name;
         AwaitFrames updateControl{5};
+
 };
 
 

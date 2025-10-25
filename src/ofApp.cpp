@@ -7,7 +7,11 @@ void ofApp::setup(){
     ofSetBackgroundColor(ofColor::blue);
     backgroundImage.load("background.png");
     backgroundImage.resize(ofGetWindowWidth(), ofGetWindowHeight());
-
+    if (!music.load("music.mp3")){
+        ofLogError() << "Music isn't loading!";
+    } else {
+        music.setLoop(true);
+    }
 
     std::shared_ptr<Aquarium> myAquarium;
     std::shared_ptr<PlayerCreature> player;
@@ -67,6 +71,7 @@ void ofApp::update(){
         auto gameScene = std::static_pointer_cast<AquariumGameScene>(gameManager->GetActiveScene());
         if(gameScene->GetLastEvent() != nullptr && gameScene->GetLastEvent()->isGameOver()){
             gameManager->Transition(GameSceneKindToString(GameSceneKind::GAME_OVER));
+            music.stop();
             return;
         }
         
@@ -128,6 +133,7 @@ void ofApp::keyPressed(int key){
         {
         case OF_KEY_SPACE:
             gameManager->Transition(GameSceneKindToString(GameSceneKind::AQUARIUM_GAME));
+            music.play();
             break;
         
         default:

@@ -35,10 +35,33 @@ void PlayerCreature::reduceDamageDebounce() {
         --m_damage_debounce;
     }
 }
+void PlayerCreature::bump(){
+    
+    m_dx = -m_dx;
+    m_dy = -m_dy;
+
+    //Move slightly in the new direction
+    m_x += m_dx * m_speed * 2.0f;
+    m_y += m_dy * m_speed * 2.0f;
+
+   
+}
+//Magnet PowerUp setup
+void PlayerCreature::activateMagnet(int duration){
+    m_magnetActive = true;
+    m_magnetTimer = duration;
+}
 
 void PlayerCreature::update() {
     this->reduceDamageDebounce();
     this->move();
+    //Magnet PowerUp
+    if (m_magnetActive){
+        if(--m_magnetTimer <= 0){
+            m_magnetActive = false;
+        }
+
+    }
 }
 
 
@@ -70,6 +93,7 @@ void PlayerCreature::loseLife(int debounce) {
         ofLogVerbose() << "Player is in damage debounce period. Frames left: " << m_damage_debounce << std::endl;
     }
 }
+
 
 // NPCreature Implementation
 NPCreature::NPCreature(float x, float y, int speed, std::shared_ptr<GameSprite> sprite)
@@ -136,6 +160,7 @@ void BiggerFish::draw() const {
 AquariumSpriteManager::AquariumSpriteManager(){
     this->m_npc_fish = std::make_shared<GameSprite>("base-fish.png", 70,70);
     this->m_big_fish = std::make_shared<GameSprite>("bigger-fish.png", 120, 120);
+    this->m_powerup = std::make_shared<GameSprite>("magnet_powerup.png", 64, 64);
 }
 
 std::shared_ptr<GameSprite> AquariumSpriteManager::GetSprite(AquariumCreatureType t){
@@ -145,6 +170,7 @@ std::shared_ptr<GameSprite> AquariumSpriteManager::GetSprite(AquariumCreatureTyp
             
         case AquariumCreatureType::NPCreature:
             return std::make_shared<GameSprite>(*this->m_npc_fish);
+        case AquariumCreatureType::PowerUp: return m_powerup;
         default:
             return nullptr;
     }
@@ -169,9 +195,26 @@ void Aquarium::addAquariumLevel(std::shared_ptr<AquariumLevel> level){
     this->m_aquariumlevels.push_back(level);
 }
 
-void Aquarium::update() {
+void Aquarium::update(std::shared_ptr<PlayerCreature> player) {
     for (auto& creature : m_creatures) {
         creature->move();
+    }
+    //Magnet PowerUp implementation
+    if (player->isMagnetActive()){
+        for (auto& creature : m_creatures){
+            if(creature -> getValue() < player->getPower()){
+                float dx = player->getX() - creature->getX();
+                float dy = player->getY() - creature->getY();
+                float distance = std::sqrt(dx*dx +dy*dy);
+                if (distance > 1.0f){
+                        dx /= distance;
+                        dy /=distance;
+                        creature -> setSpeed(4);
+                        creature -> setDirection(dx,dy);
+                    }
+            }
+        }
+
     }
     this->Repopulate();
 }
@@ -261,6 +304,12 @@ void Aquarium::Repopulate() {
 
 // Aquarium collision detection
 std::shared_ptr<GameEvent> DetectAquariumCollisions(std::shared_ptr<Aquarium> aquarium, std::shared_ptr<PlayerCreature> player) {
+    for (int i = 0; i < aquarium->getCreatureCount(); i++){
+        auto creature = aquarium->getCreatureAt(i);
+        if(creature && creature != player && checkCollision(player, creature)){
+            return std::make_shared<GameEvent>(GameEventType::COLLISION, player, creature);
+    }
+}
     if (!aquarium || !player) return nullptr;
     
     for (int i = 0; i < aquarium->getCreatureCount(); ++i) {
@@ -285,13 +334,24 @@ void AquariumGameScene::Update(){
             ofLogVerbose() << "Collision detected between player and NPC!" << std::endl;
             if(event->creatureB != nullptr){
                 event->print();
+                //Magnet PowerUp collision check
+                if (auto power = std::dynamic_pointer_cast<PowerUp>(event->creatureB)){
+                    if(power->getPowerUpType()==PowerUpType::MAGNET_CORE){
+                        this->m_player->activateMagnet(10*60);
+                        this->m_aquarium->removeCreature(power);
+                        ofLogNotice()<<"Magnet Core activated!";
+                        return;
+                    }
+                }
                 if(this->m_player->getPower() < event->creatureB->getValue()){
                     ofLogNotice() << "Player is too weak to eat the creature!" << std::endl;
                     this->m_player->loseLife(3*60); // 3 frames debounce, 3 seconds at 60fps
+                    this->m_player->bump();
                     if(this->m_player->getLives() <= 0){
                         this->m_lastEvent = std::make_shared<GameEvent>(GameEventType::GAME_OVER, this->m_player, nullptr);
                         return;
                     }
+                    
                 }
                 else{
                     this->m_aquarium->removeCreature(event->creatureB);
@@ -300,16 +360,27 @@ void AquariumGameScene::Update(){
                         this->m_player->increasePower(1);
                         ofLogNotice() << "Player power increased to " << this->m_player->getPower() << "!" << std::endl;
                     }
-                    
-                }
                 
+                //Magnet Core PowerUp to spawn
+                if(this->m_player->getScore()>=30 && this->m_player->getScore() % 30==0){
+                    auto magnet = std::make_shared<PowerUp>(
+                        rand() % this-> m_aquarium->getWidth(),
+                        rand() % this-> m_aquarium->getHeight(),
+                        this->m_aquarium->getSpriteManager()->GetSprite(AquariumCreatureType::PowerUp),
+                        PowerUpType::MAGNET_CORE
+                    );
+                
+                this->m_aquarium->addCreature(magnet);
+                ofLogNotice() << "Magnet Core spawned";
+                }
+            }
                 
 
             } else {
                 ofLogError() << "Error: creatureB is null in collision event." << std::endl;
             }
         }
-        this->m_aquarium->update();
+        this->m_aquarium->update(m_player);
     }
 
 }
