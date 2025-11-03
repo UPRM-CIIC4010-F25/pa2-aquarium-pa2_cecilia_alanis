@@ -8,6 +8,10 @@ string AquariumCreatureTypeToString(AquariumCreatureType t){
             return "BiggerFish";
         case AquariumCreatureType::NPCreature:
             return "BaseFish";
+        case AquariumCreatureType::NemoFish:
+            return "NemoFish";
+        case AquariumCreatureType::DoryFish:
+            return "DoryFish";
         default:
             return "UknownFish";
     }
@@ -155,12 +159,123 @@ void BiggerFish::draw() const {
     this->m_sprite->draw(this->m_x, this->m_y);
 }
 
+// NemoFish Implementation
+NemoFish::NemoFish(float x, float y, int speed, std::shared_ptr<GameSprite> sprite)
+: NPCreature(x, y, speed, sprite) {
+    m_dx = (rand() % 3 - 1);
+    m_dy = (rand() % 3 - 1);
+    normalize();
+    setCollisionRadius(36);
+    m_value = 3;
+    m_creatureType = AquariumCreatureType::NemoFish;
+
+}
+
+void NemoFish::move() {
+// Distinct movement behavior: Fast and Erractic
+
+    // Moves two times faster
+    m_x += m_dx * (m_speed * 2.0);
+    m_y += m_dy * (m_speed * 2.0);
+
+    // Erratic behavior: 25% chance of changing direction after each move
+    if(rand() % 100 < 25) {
+        m_dx = (rand() % 5 - 2);
+        m_dy = (rand() % 5 - 2);
+        normalize();
+
+        //Sharp turns when changing direction (10% chance) 
+        if(rand() % 10 == 0) {
+            m_dx *= 3.0;
+            m_dy *= 3.0;
+            normalize();
+        }
+    }
+
+    if(m_dx < 0 ){
+        this->m_sprite->setFlipped(true);
+    }
+    else {
+        this->m_sprite->setFlipped(false);
+    }
+    bounce();
+}
+
+void NemoFish::draw() const {
+    ofLogVerbose() << "NemoFish at (" << m_x << ", " << m_y << ") with speed " << m_speed << std::endl;
+    this->m_sprite->draw(this->m_x, this->m_y);
+
+}
+
+// DoryFish Implementation
+DoryFish::DoryFish(float x, float y, int speed, std::shared_ptr<GameSprite> sprite)
+: NPCreature(x, y, speed, sprite) {
+    m_dx = (rand() % 3 - 1);
+    m_dy = (rand() % 3 - 1);
+    normalize();
+    setCollisionRadius(48);
+    m_value = 4;
+    m_creatureType = AquariumCreatureType::DoryFish;
+    m_movementTimer = 60 + rand() % 60;
+}
+
+void DoryFish::move() {
+// Distinct movement behavior: Slow and Forgetful
+
+    // Moves at half the speed
+    m_x += m_dx * (m_speed * 0.5);
+    m_y += m_dy * (m_speed * 0.5);
+
+    if(m_movementTimer <= 0) {
+
+        int action = rand() % 100; // Calculates a percentage to determine which of Dory's movements will be performed
+
+        if(action < 40) {   // 40% chance of Stop and Pause
+            m_dx = 0;
+            m_dy = 0;
+            m_movementTimer = 30 + rand() % 30;     // Dory pauses for 30 to 60 frames
+        }
+
+        else if(action < 80) {   // 40% chance of changing direction randomly
+            m_dx = (rand() % 3 - 1);
+            m_dy = (rand() % 3 - 1);
+            normalize();
+            m_movementTimer = 60 + rand() % 60;     // Keeps new direction for 1 to 2 seconds
+        }
+        else {  // 20% chance of rapid direction changes
+            m_dx = (rand() % 3 - 1);
+            m_dy = (rand() % 3 - 1);
+            normalize();
+            m_movementTimer = 10 + rand() % 20;
+        }
+    }
+
+    else {
+        m_movementTimer--;
+    }
+
+    if(m_dx < 0 ){
+        this->m_sprite->setFlipped(true);
+    }
+    else {
+        this->m_sprite->setFlipped(false);
+    }
+    bounce();
+}
+
+void DoryFish::draw() const {
+    ofLogVerbose() << "DoryFish at (" << m_x << ", " << m_y << ") with speed " << m_speed << std::endl;
+    this->m_sprite->draw(this->m_x, this->m_y);
+
+}
 
 // AquariumSpriteManager
 AquariumSpriteManager::AquariumSpriteManager(){
     this->m_npc_fish = std::make_shared<GameSprite>("base-fish.png", 70,70);
     this->m_big_fish = std::make_shared<GameSprite>("bigger-fish.png", 120, 120);
     this->m_powerup = std::make_shared<GameSprite>("magnet_powerup.png", 64, 64);
+    this->m_nemo_fish = std::make_shared<GameSprite>("Nemo.png", 85, 85);
+    this->m_dory_fish = std::make_shared<GameSprite>("Dory.png", 100, 100);
 }
 
 std::shared_ptr<GameSprite> AquariumSpriteManager::GetSprite(AquariumCreatureType t){
@@ -170,7 +285,15 @@ std::shared_ptr<GameSprite> AquariumSpriteManager::GetSprite(AquariumCreatureTyp
             
         case AquariumCreatureType::NPCreature:
             return std::make_shared<GameSprite>(*this->m_npc_fish);
+
         case AquariumCreatureType::PowerUp: return m_powerup;
+
+        case AquariumCreatureType::NemoFish:
+            return std::make_shared<GameSprite>(*this->m_nemo_fish);
+
+        case AquariumCreatureType::DoryFish:
+            return std::make_shared<GameSprite>(*this->m_dory_fish);
+
         default:
             return nullptr;
     }
@@ -261,6 +384,12 @@ void Aquarium::SpawnCreature(AquariumCreatureType type) {
             break;
         case AquariumCreatureType::BiggerFish:
             this->addCreature(std::make_shared<BiggerFish>(x, y, speed, this->m_sprite_manager->GetSprite(AquariumCreatureType::BiggerFish)));
+            break;
+        case AquariumCreatureType::NemoFish:
+            this->addCreature(std::make_shared<NemoFish>(x, y, speed, this->m_sprite_manager->GetSprite(AquariumCreatureType::NemoFish)));
+            break;
+        case AquariumCreatureType::DoryFish:
+            this->addCreature(std::make_shared<DoryFish>(x, y, speed, this->m_sprite_manager->GetSprite(AquariumCreatureType::DoryFish)));
             break;
         default:
             ofLogError() << "Unknown creature type to spawn!";
@@ -431,49 +560,26 @@ bool AquariumLevel::isCompleted(){
     return this->m_level_score >= this->m_targetScore;
 }
 
-
-
-
 std::vector<AquariumCreatureType> Level_0::Repopulate() {
-    std::vector<AquariumCreatureType> toRepopulate;
-    for(std::shared_ptr<AquariumLevelPopulationNode> node : this->m_levelPopulation){
-        int delta = node->population - node->currentPopulation;
-        ofLogVerbose() << "to Repopulate :  " << delta << endl;
-        if(delta >0){
-            for(int i = 0; i<delta; i++){
-                toRepopulate.push_back(node->creatureType);
-            }
-            node->currentPopulation += delta;
-        }
-    }
-    return toRepopulate;
-
+    return RepopulateTemplate();
 }
 
 std::vector<AquariumCreatureType> Level_1::Repopulate() {
-    std::vector<AquariumCreatureType> toRepopulate;
-    for(std::shared_ptr<AquariumLevelPopulationNode> node : this->m_levelPopulation){
-        int delta = node->population - node->currentPopulation;
-        if(delta >0){
-            for(int i=0; i<delta; i++){
-                toRepopulate.push_back(node->creatureType);
-            }
-            node->currentPopulation += delta;
-        }
-    }
-    return toRepopulate;
+    return RepopulateTemplate();
 }
 
 std::vector<AquariumCreatureType> Level_2::Repopulate() {
-    std::vector<AquariumCreatureType> toRepopulate;
-    for(std::shared_ptr<AquariumLevelPopulationNode> node : this->m_levelPopulation){
-        int delta = node->population - node->currentPopulation;
-        if(delta >0){
-            for(int i=0; i<delta; i++){
-                toRepopulate.push_back(node->creatureType);
-            }
-            node->currentPopulation += delta;
-        }
-    }
-    return toRepopulate;
+    return RepopulateTemplate();
+}
+
+std::vector<AquariumCreatureType> Level_3::Repopulate() {
+    return RepopulateTemplate();
+}
+
+std::vector<AquariumCreatureType> Level_4::Repopulate() {
+    return RepopulateTemplate();
+}
+
+std::vector<AquariumCreatureType> Level_5::Repopulate() {
+    return RepopulateTemplate();
 }
