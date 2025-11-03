@@ -105,8 +105,6 @@ public:
 // PowerUp types
 enum class PowerUpType {
     MAGNET_CORE,
-    SPEED_BOOST,
-    SCORE_SURGE,
 };
 
 // PowerUp class derived from Creature

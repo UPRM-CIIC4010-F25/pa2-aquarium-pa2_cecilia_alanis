@@ -286,7 +286,8 @@ std::shared_ptr<GameSprite> AquariumSpriteManager::GetSprite(AquariumCreatureTyp
         case AquariumCreatureType::NPCreature:
             return std::make_shared<GameSprite>(*this->m_npc_fish);
 
-        case AquariumCreatureType::PowerUp: return m_powerup;
+        case AquariumCreatureType::PowerUp:
+            return std::make_shared<GameSprite>(*this->m_powerup);
 
         case AquariumCreatureType::NemoFish:
             return std::make_shared<GameSprite>(*this->m_nemo_fish);
